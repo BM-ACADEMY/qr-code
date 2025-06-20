@@ -29,10 +29,7 @@ const QrScanner = () => {
     try {
       await html5QrCode.start(
         { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 300, height: 150 },
-        },
+        { fps: 10, qrbox: { width: 300, height: 150 } },
         (decodedText) => {
           setResult(decodedText);
           setShowDialog(true);
@@ -93,11 +90,20 @@ const QrScanner = () => {
             <p className="absolute -top-4 left-4 text-xs font-medium bg-white px-2 py-0.5 rounded shadow text-[#000052]">
               Scan Live QR
             </p>
-            <div
-              id="qr-reader"
-              ref={qrRef}
-              className="w-full h-48 mx-auto rounded-md overflow-hidden"
-            />
+
+            <div className="w-full h-48 rounded-md overflow-hidden relative">
+              {!scanning && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <QrCode className="w-20 h-20 text-[#00004d] opacity-20" />
+                </div>
+              )}
+              <div id="qr-reader" ref={qrRef} className="w-full h-full" />
+              {scanning && (
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                  <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500 animate-scan-beam" />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mt-4 text-center">

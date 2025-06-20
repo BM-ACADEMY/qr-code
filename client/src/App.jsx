@@ -27,6 +27,7 @@ const QrScanner = () => {
   const html5QrCodeRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState("");
+  const [parsedData, setParsedData] = useState({ name: "", store: "" });
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [amount, setAmount] = useState("");
@@ -43,6 +44,15 @@ const QrScanner = () => {
         { fps: 10, qrbox: { width: 300, height: 150 } },
         (decodedText) => {
           setResult(decodedText);
+          try {
+            const data = JSON.parse(decodedText);
+            setParsedData({
+              name: data.name || "",
+              store: data.store || "",
+            });
+          } catch {
+            setParsedData({ name: "", store: "" });
+          }
           setShowPaymentDialog(true);
           stopScanner();
         },
@@ -147,8 +157,7 @@ const QrScanner = () => {
           <ul className="space-y-3 text-gray-700 text-sm">
             <li className="flex items-start gap-2">
               <span className="text-[#000066] font-semibold">•</span>
-              Ask the vendor to show their payment QR code and scan it using
-              the scanner.
+              Ask the vendor to show their payment QR code and scan it using the scanner.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[#000066] font-semibold">•</span>
@@ -162,17 +171,29 @@ const QrScanner = () => {
         </div>
       </div>
 
-      {/* Payment Dialog */}
+      {/* Payment Input Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Complete Payment</DialogTitle>
           </DialogHeader>
 
-          {/* Scanned QR Info */}
-          <div className="bg-[#f4f6ff] border text-sm text-gray-700 px-4 py-2 rounded mb-4">
-            <span className="font-medium text-[#00004d]">Scanned QR:</span>{" "}
-            {result}
+          {/* Scanned Info */}
+          <div className="bg-[#f4f6ff] border text-sm text-gray-700 px-4 py-2 rounded mb-4 space-y-1">
+            {parsedData.name && (
+              <p>
+                <span className="font-medium text-[#00004d]">Name:</span> {parsedData.name}
+              </p>
+            )}
+            {parsedData.store && (
+              <p>
+                <span className="font-medium text-[#00004d]">Store:</span> {parsedData.store}
+              </p>
+            )}
+            <p>
+              <span className="font-medium text-[#00004d]">QR Code:</span>{" "}
+              {result.length > 50 ? result.slice(0, 50) + "..." : result}
+            </p>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -200,9 +221,21 @@ const QrScanner = () => {
             <DialogTitle>Payment Successful</DialogTitle>
           </DialogHeader>
 
-          <div className="bg-[#e6ffef] border text-sm text-green-700 px-4 py-2 rounded mb-3">
-            <span className="font-medium text-green-800">Scanned QR:</span>{" "}
-            {result}
+          <div className="bg-[#e6ffef] border text-sm text-green-700 px-4 py-2 rounded mb-3 space-y-1">
+            {parsedData.name && (
+              <p>
+                <span className="font-medium text-green-900">Name:</span> {parsedData.name}
+              </p>
+            )}
+            {parsedData.store && (
+              <p>
+                <span className="font-medium text-green-900">Store:</span> {parsedData.store}
+              </p>
+            )}
+            <p>
+              <span className="font-medium text-green-900">QR Code:</span>{" "}
+              {result.length > 50 ? result.slice(0, 50) + "..." : result}
+            </p>
           </div>
 
           <p className="text-green-600 text-center font-semibold">
@@ -210,10 +243,7 @@ const QrScanner = () => {
           </p>
 
           <DialogFooter className="mt-4 flex justify-end">
-            <Button
-              onClick={() => setShowSuccessDialog(false)}
-              variant="outline"
-            >
+            <Button onClick={() => setShowSuccessDialog(false)} variant="outline">
               Done
             </Button>
           </DialogFooter>

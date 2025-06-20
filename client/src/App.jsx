@@ -3,7 +3,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  QrCode,
+  Play,
+  Square,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -79,13 +86,13 @@ const QrScanner = () => {
 
   return (
     <Card className="mt-10 w-full max-w-6xl p-8 rounded-2xl shadow-md bg-white mx-auto">
-      <h2 className="text-2xl font-bold text-[#00004d] mb-6 text-center">
+      <h2 className="text-2xl font-bold text-[#00004d] mb-6 text-left">
         QR Code Scanner
       </h2>
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left: QR Scanner */}
-        <div className="flex-1 flex flex-col items-center">
+        <div className="flex-1 flex flex-col items-start">
           <div className="relative w-full max-w-sm border-2 border-dashed border-[#000052] rounded-xl p-4 bg-[#f5f6fb] shadow-inner">
             <p className="absolute -top-4 left-4 text-xs font-medium bg-white px-2 py-0.5 rounded shadow text-[#000052]">
               Scan Live QR
@@ -98,27 +105,24 @@ const QrScanner = () => {
                 </div>
               )}
               <div id="qr-reader" ref={qrRef} className="w-full h-full" />
-              {scanning && (
-                <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                  <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500 animate-scan-beam" />
-                </div>
-              )}
             </div>
           </div>
 
-          <div className="mt-4 text-center">
+          <div className="mt-4 text-left">
             {!scanning ? (
               <Button
                 onClick={startScanner}
-                className="bg-[#000066] hover:bg-[#000080] text-white text-sm"
+                className="bg-[#000066] hover:bg-[#000080] text-white text-sm flex items-center gap-2"
               >
+                <Play className="w-4 h-4" />
                 Start Scanner
               </Button>
             ) : (
               <Button
                 onClick={stopScanner}
-                className="bg-red-600 hover:bg-red-700 text-white text-sm"
+                className="bg-red-600 hover:bg-red-700 text-white text-sm flex items-center gap-2"
               >
+                <Square className="w-4 h-4" />
                 Stop Scanner
               </Button>
             )}

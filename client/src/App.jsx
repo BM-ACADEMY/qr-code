@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { ScanLine, Play, Square } from "lucide-react";
 
 const Deduct = () => {
-  const qrCodeRef = useRef<Html5Qrcode | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [amount, setAmount] = useState("");
   const [customer, setCustomer] = useState({
@@ -25,52 +25,53 @@ const Deduct = () => {
   });
 
   const startScanner = async () => {
-    const qrRegionId = "qr-reader";
-    if (qrCodeRef.current) return; // prevent duplicate instances
+    // Delay to ensure #qr-reader exists in the DOM
+    setTimeout(async () => {
+      const qrRegionId = "qr-reader";
+      const html5QrCode = new Html5Qrcode(qrRegionId);
+      html5QrCodeRef.current = html5QrCode;
 
-    const html5QrCode = new Html5Qrcode(qrRegionId);
-    qrCodeRef.current = html5QrCode;
-
-    try {
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 300, height: 150 } },
-        (decodedText) => {
-          try {
-            const data = JSON.parse(decodedText);
-            if (!data.name || !data.id || typeof data.balance !== "number") {
-              alert("Invalid QR code data.");
-              return;
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 300, height: 150 } },
+          (decodedText) => {
+            try {
+              const data = JSON.parse(decodedText);
+              if (!data.name || !data.id || typeof data.balance !== "number") {
+                alert("Invalid QR code data.");
+                return;
+              }
+              setCustomer({
+                name: data.name,
+                id: data.id,
+                balance: data.balance,
+              });
+              stopScanner();
+            } catch (err) {
+              console.error("QR parse error:", err);
+              alert("Failed to parse QR code.");
             }
-            setCustomer({
-              name: data.name,
-              id: data.id,
-              balance: data.balance,
-            });
-            stopScanner();
-          } catch (err) {
-            console.error("QR parse error:", err);
-            alert("Failed to parse QR code.");
+          },
+          (error) => {
+            console.warn("QR scan error:", error);
           }
-        },
-        (err) => console.warn("Scan error", err)
-      );
-
-      setScanning(true);
-    } catch (error) {
-      console.error("Camera access error:", error);
-      alert("Camera access failed. Please check browser permissions.");
-    }
+        );
+        setScanning(true);
+      } catch (err) {
+        console.error("Camera error:", err);
+        alert("Failed to start camera. Please allow camera access.");
+      }
+    }, 100); // Delay ensures #qr-reader is mounted
   };
 
   const stopScanner = async () => {
-    if (qrCodeRef.current) {
+    if (html5QrCodeRef.current) {
       try {
-        await qrCodeRef.current.stop();
-        await qrCodeRef.current.clear();
-        qrCodeRef.current = null;
-      } catch (error) {
-        console.error("Stop scanner error:", error);
+        await html5QrCodeRef.current.stop();
+        await html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.error("Stop scanner failed:", err);
       }
       setScanning(false);
     }
@@ -94,7 +95,7 @@ const Deduct = () => {
 
   useEffect(() => {
     return () => {
-      stopScanner(); // Clean up on unmount
+      stopScanner();
     };
   }, []);
 
@@ -111,7 +112,7 @@ const Deduct = () => {
         >
           {!scanning && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <ScanLine className="w-32 h-32 text-[#00004d] opacity-80" />
+              <ScanLine className="w-40 h-40 text-[#00004d] opacity-90" />
             </div>
           )}
         </div>

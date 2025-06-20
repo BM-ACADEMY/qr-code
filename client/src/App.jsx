@@ -43,7 +43,7 @@ const QrScanner = () => {
         { fps: 10, qrbox: { width: 300, height: 150 } },
         (decodedText) => {
           setResult(decodedText);
-          setShowPaymentDialog(true); // Show payment input
+          setShowPaymentDialog(true);
           stopScanner();
         },
         (error) => {
@@ -147,7 +147,8 @@ const QrScanner = () => {
           <ul className="space-y-3 text-gray-700 text-sm">
             <li className="flex items-start gap-2">
               <span className="text-[#000066] font-semibold">•</span>
-              Ask the vendor to show their payment QR code and scan it using the scanner.
+              Ask the vendor to show their payment QR code and scan it using
+              the scanner.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-[#000066] font-semibold">•</span>
@@ -161,12 +162,19 @@ const QrScanner = () => {
         </div>
       </div>
 
-      {/* Payment Input Dialog */}
+      {/* Payment Dialog */}
       <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enter Amount</DialogTitle>
+            <DialogTitle>Complete Payment</DialogTitle>
           </DialogHeader>
+
+          {/* Scanned QR Info */}
+          <div className="bg-[#f4f6ff] border text-sm text-gray-700 px-4 py-2 rounded mb-4">
+            <span className="font-medium text-[#00004d]">Scanned QR:</span>{" "}
+            {result}
+          </div>
+
           <div className="flex flex-col gap-4">
             <label className="text-sm text-gray-600">Amount (₹)</label>
             <Input
@@ -176,6 +184,7 @@ const QrScanner = () => {
               placeholder="₹ Enter amount"
             />
           </div>
+
           <DialogFooter className="mt-4 flex justify-end">
             <Button onClick={handlePaymentSubmit} className="bg-[#000066] text-white">
               Pay Now
@@ -190,11 +199,21 @@ const QrScanner = () => {
           <DialogHeader>
             <DialogTitle>Payment Successful</DialogTitle>
           </DialogHeader>
-          <p className="text-green-600 text-center font-medium mt-2">
+
+          <div className="bg-[#e6ffef] border text-sm text-green-700 px-4 py-2 rounded mb-3">
+            <span className="font-medium text-green-800">Scanned QR:</span>{" "}
+            {result}
+          </div>
+
+          <p className="text-green-600 text-center font-semibold">
             ₹{amount} paid successfully!
           </p>
+
           <DialogFooter className="mt-4 flex justify-end">
-            <Button onClick={() => setShowSuccessDialog(false)} variant="outline">
+            <Button
+              onClick={() => setShowSuccessDialog(false)}
+              variant="outline"
+            >
               Done
             </Button>
           </DialogFooter>

@@ -15,9 +15,7 @@ import { Label } from "@/components/ui/label";
 import { ScanLine, Play, Square } from "lucide-react";
 
 const Deduct = () => {
-  const qrRef = useRef(null);
-  const html5QrCodeRef = useRef(null);
-
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [amount, setAmount] = useState("");
   const [customer, setCustomer] = useState({
@@ -27,7 +25,8 @@ const Deduct = () => {
   });
 
   const startScanner = async () => {
-    const html5QrCode = new Html5Qrcode("qr-reader");
+    const qrRegionId = "qr-reader";
+    const html5QrCode = new Html5Qrcode(qrRegionId);
     html5QrCodeRef.current = html5QrCode;
 
     try {
@@ -48,22 +47,29 @@ const Deduct = () => {
             });
             stopScanner();
           } catch (err) {
-            console.error("QR parse error", err);
+            console.error("QR parse error:", err);
             alert("Failed to parse QR code.");
           }
         },
-        (error) => console.warn("QR scan error:", error)
+        (error) => {
+          console.warn("QR scan error:", error);
+        }
       );
       setScanning(true);
     } catch (err) {
       console.error("Camera error:", err);
+      alert("Failed to start camera. Please allow camera access.");
     }
   };
 
   const stopScanner = async () => {
     if (html5QrCodeRef.current) {
-      await html5QrCodeRef.current.stop();
-      await html5QrCodeRef.current.clear();
+      try {
+        await html5QrCodeRef.current.stop();
+        await html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.error("Stop scanner failed:", err);
+      }
       setScanning(false);
     }
   };
@@ -85,19 +91,20 @@ const Deduct = () => {
   };
 
   useEffect(() => {
-    return () => stopScanner();
+    return () => {
+      stopScanner();
+    };
   }, []);
 
   return (
     <div className="max-w-6xl mx-auto mt-10 flex flex-col lg:flex-row gap-6">
-      {/* Left - QR Scanner */}
+      {/* Left: QR Scanner */}
       <Card className="flex-1 p-6">
         <h2 className="text-xl font-semibold mb-4 text-[#0b1d4d]">
           Scan Customer QR Code
         </h2>
         <div
           id="qr-reader"
-          ref={qrRef}
           className="w-full h-60 bg-gray-100 rounded relative"
         >
           {!scanning && (
@@ -126,7 +133,7 @@ const Deduct = () => {
         </div>
       </Card>
 
-      {/* Right - Customer Info & Deduct */}
+      {/* Right: Customer Info & Deduct */}
       <Card className="flex-1">
         <CardHeader>
           <CardTitle>Customer Details</CardTitle>
@@ -168,8 +175,8 @@ const Deduct = () => {
               />
             </div>
             <Button
-              className="w-full mt-2 h-8 px-3 py-1 text-xs bg-[#1a2f87] text-white"
               onClick={handleDeduct}
+              className="w-full mt-2 h-8 px-3 py-1 text-xs bg-[#1a2f87] text-white"
             >
               Deduct Points
             </Button>

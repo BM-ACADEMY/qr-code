@@ -2,31 +2,31 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Button } from "@/components/ui/button";
-import { QrCode, Play, Square, ScanLine } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import FoodStalls from "@/Modules/User/pages/UserDasboardpage/Foodstallsection";
+import { Label } from "@/components/ui/label";
+import { ScanLine, Play, Square } from "lucide-react";
 
-const QrScanner = () => {
-  const qrRef = useRef(null);
-  const html5QrCodeRef = useRef(null);
+const Deduct = () => {
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState("");
-  const [parsedData, setParsedData] = useState({ name: "", store: "" });
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [amount, setAmount] = useState("");
+  const [customer, setCustomer] = useState({
+    name: "",
+    id: "",
+    balance: 0,
+  });
 
   const startScanner = async () => {
-    const html5QrCode = new Html5Qrcode("qr-reader");
+    const qrRegionId = "qr-reader";
+    const html5QrCode = new Html5Qrcode(qrRegionId);
     html5QrCodeRef.current = html5QrCode;
 
     try {
@@ -34,18 +34,22 @@ const QrScanner = () => {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 300, height: 150 } },
         (decodedText) => {
-          setResult(decodedText);
           try {
             const data = JSON.parse(decodedText);
-            setParsedData({
-              name: data.name || "",
-              store: data.store || "",
+            if (!data.name || !data.id || typeof data.balance !== "number") {
+              alert("Invalid QR code data.");
+              return;
+            }
+            setCustomer({
+              name: data.name,
+              id: data.id,
+              balance: data.balance,
             });
-          } catch {
-            setParsedData({ name: "", store: "" });
+            stopScanner();
+          } catch (err) {
+            console.error("QR parse error:", err);
+            alert("Failed to parse QR code.");
           }
-          setShowPaymentDialog(true);
-          stopScanner();
         },
         (error) => {
           console.warn("QR scan error:", error);
@@ -53,7 +57,8 @@ const QrScanner = () => {
       );
       setScanning(true);
     } catch (err) {
-      console.error("Camera start failed:", err);
+      console.error("Camera error:", err);
+      alert("Failed to start camera. Please allow camera access.");
     }
   };
 
@@ -62,196 +67,124 @@ const QrScanner = () => {
       try {
         await html5QrCodeRef.current.stop();
         await html5QrCodeRef.current.clear();
-        setScanning(false);
       } catch (err) {
-        console.error("Stop failed:", err);
+        console.error("Stop scanner failed:", err);
       }
+      setScanning(false);
     }
   };
 
-  const handlePaymentSubmit = () => {
-    if (amount.trim() !== "") {
-      setShowPaymentDialog(false);
-      setShowSuccessDialog(true);
-    }
-  };
+  const handleDeduct = () => {
+    const deductAmount = parseFloat(amount);
+    if (isNaN(deductAmount) || deductAmount <= 0) return;
 
-  const handleManualPayNow = ({ name, store, result }) => {
-    setParsedData({ name, store });
-    setResult(result);
-    setShowPaymentDialog(true);
+    if (deductAmount > customer.balance) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    setCustomer((prev) => ({
+      ...prev,
+      balance: prev.balance - deductAmount,
+    }));
+    setAmount("");
   };
 
   useEffect(() => {
-    return () => stopScanner();
+    return () => {
+      stopScanner();
+    };
   }, []);
 
   return (
-    <>
-      <Card className="mt-10 w-full max-w-6xl p-8 rounded-2xl shadow-md bg-white mx-auto">
-        <h2 className="text-2xl font-bold text-[#00004d] mb-6 text-left">
-          QR Code Scanner
+    <div className="max-w-6xl mx-auto mt-10 flex flex-col lg:flex-row gap-6">
+      {/* Left: QR Scanner */}
+      <Card className="flex-1 p-6">
+        <h2 className="text-xl font-semibold mb-4 text-[#0b1d4d]">
+          Scan Customer QR Code
         </h2>
-
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="flex-1 flex flex-col items-center">
-            <div className="relative w-full max-w-sm border-2 border-dashed border-[#000052] rounded-xl p-4 bg-[#f5f6fb] shadow-inner">
-              <p className="absolute -top-4 left-4 text-xs font-medium bg-white px-2 py-0.5 rounded shadow text-[#000052]">
-                Scan Live QR
-              </p>
-
-              <div className="w-full h-56 rounded-md overflow-hidden relative">
-                {!scanning && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <ScanLine className="w-40 h-40 text-[#00004d] opacity-90" />
-                  </div>
-                )}
-                <div id="qr-reader" ref={qrRef} className="w-full h-full" />
-              </div>
+        <div
+          id="qr-reader"
+          className="w-full h-60 bg-gray-100 rounded relative"
+        >
+          {!scanning && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ScanLine className="w-40 h-40 text-[#00004d] opacity-90" />
             </div>
-
-            <div className="mt-6 w-full flex justify-center">
-              {!scanning ? (
-                <Button
-                  onClick={startScanner}
-                  className="bg-[#000066] hover:bg-[#000080] text-white text-sm flex items-center gap-2"
-                >
-                  <Play className="w-4 h-4" />
-                  Start Scanner
-                </Button>
-              ) : (
-                <Button
-                  onClick={stopScanner}
-                  className="bg-red-600 hover:bg-red-700 text-white text-sm flex items-center gap-2"
-                >
-                  <Square className="w-4 h-4" />
-                  Stop Scanner
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 bg-white/50 backdrop-blur-lg border border-gray-200 rounded-xl p-6 shadow-sm max-h-[calc(50vh-100px)] overflow-y-auto">
-            <div className="flex items-center gap-3 mb-4">
-              <QrCode className="w-6 h-6 text-[#00004d]" />
-              <h3 className="text-lg font-semibold text-[#00004d]">
-                Scan QR to Pay
-              </h3>
-            </div>
-
-            <p className="text-sm text-gray-600 mb-4">How to Pay</p>
-            <ul className="space-y-3 text-gray-700 text-sm">
-              <li className="flex items-start gap-2">
-                <span className="text-[#000066] font-semibold">•</span>
-                Ask the vendor to show their payment QR code and scan it using
-                the scanner.
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#000066] font-semibold">•</span>
-                Confirm the amount and vendor details.
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#000066] font-semibold">•</span>
-                Complete your payment.
-              </li>
-            </ul>
-          </div>
+          )}
         </div>
 
-        {/* Payment Dialog */}
-        <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Complete Payment</DialogTitle>
-            </DialogHeader>
+        <div className="mt-4">
+          {!scanning ? (
+            <Button
+              onClick={startScanner}
+              className="bg-[#000066] text-white flex items-center gap-2"
+            >
+              <Play className="w-4 h-4" /> Start Scanner
+            </Button>
+          ) : (
+            <Button
+              onClick={stopScanner}
+              className="bg-red-600 text-white flex items-center gap-2"
+            >
+              <Square className="w-4 h-4" /> Stop Scanner
+            </Button>
+          )}
+        </div>
+      </Card>
 
-            <div className="bg-[#f4f6ff] border text-sm text-gray-700 px-4 py-2 rounded mb-4 space-y-1">
-              {parsedData.name && (
-                <p>
-                  <span className="font-medium text-[#00004d]">Name:</span>{" "}
-                  {parsedData.name}
-                </p>
-              )}
-              {parsedData.store && (
-                <p>
-                  <span className="font-medium text-[#00004d]">Store:</span>{" "}
-                  {parsedData.store}
-                </p>
-              )}
-              <p>
-                <span className="font-medium text-[#00004d]">QR Code:</span>{" "}
-                {result.length > 50 ? result.slice(0, 50) + "..." : result}
+      {/* Right: Customer Info & Deduct */}
+      <Card className="flex-1">
+        <CardHeader>
+          <CardTitle>Customer Details</CardTitle>
+          <CardDescription>
+            Scan QR to fetch customer details and deduct points.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <p className="font-semibold text-lg">
+                Name: {customer.name || "null"}
+              </p>
+              <p className="text-sm text-gray-500">
+                ID: {customer.id || "null"}
               </p>
             </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Balance</p>
+              <p className="text-xl font-bold text-blue-700">
+                ₹{customer.balance ?? 0}
+              </p>
+            </div>
+          </div>
 
-            <div className="flex flex-col gap-4">
-              <label className="text-sm text-gray-600">Amount (₹)</label>
+          <div className="space-y-1">
+            <Label htmlFor="deductAmount" className="text-sm">
+              Deduct Points
+            </Label>
+            <div className="flex items-center gap-2">
+              <span className="text-base pt-1">₹</span>
               <Input
+                id="deductAmount"
                 type="number"
+                className="h-8 px-3 text-sm"
+                placeholder="Amount to deduct"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="₹ Enter amount"
               />
             </div>
-
-            <DialogFooter className="mt-4 flex justify-end">
-              <Button
-                onClick={handlePaymentSubmit}
-                className="bg-[#000066] text-white"
-              >
-                Pay Now
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Success Dialog */}
-        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Payment Successful</DialogTitle>
-            </DialogHeader>
-
-            <div className="bg-[#e6ffef] border text-sm text-green-700 px-4 py-2 rounded mb-3 space-y-1">
-              {parsedData.name && (
-                <p>
-                  <span className="font-medium text-green-900">Name:</span>{" "}
-                  {parsedData.name}
-                </p>
-              )}
-              {parsedData.store && (
-                <p>
-                  <span className="font-medium text-green-900">Store:</span>{" "}
-                  {parsedData.store}
-                </p>
-              )}
-              <p>
-                <span className="font-medium text-green-900">QR Code:</span>{" "}
-                {result.length > 50 ? result.slice(0, 50) + "..." : result}
-              </p>
-            </div>
-
-            <p className="text-green-600 text-center font-semibold">
-              ₹{amount} paid successfully!
-            </p>
-
-            <DialogFooter className="mt-4 flex justify-end">
-              <Button
-                onClick={() => setShowSuccessDialog(false)}
-                variant="outline"
-              >
-                Done
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <Button
+              onClick={handleDeduct}
+              className="w-full mt-2 h-8 px-3 py-1 text-xs bg-[#1a2f87] text-white"
+            >
+              Deduct Points
+            </Button>
+          </div>
+        </CardContent>
       </Card>
-
-      <Card className="mt-10 w-full max-w-6xl p-8 rounded-2xl shadow-md bg-white mx-auto">
-        <FoodStalls handlePayNow={handleManualPayNow} />
-      </Card>
-    </>
+    </div>
   );
 };
 
-export default QrScanner;
+export default Deduct;

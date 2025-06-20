@@ -98,9 +98,11 @@ const QrScanner = () => {
                 </div>
               )}
               <div id="qr-reader" ref={qrRef} className="w-full h-full" />
+
+              {/* Scanning Beam */}
               {scanning && (
-                <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                  <div className="absolute top-0 left-0 w-full h-0.5 bg-red-500 animate-scan-beam" />
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none z-10">
+                  <div className="scanner-line w-full h-0.5 bg-red-500"></div>
                 </div>
               )}
             </div>
@@ -184,6 +186,25 @@ const QrScanner = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Inline CSS for beam animation */}
+      <style jsx>{`
+        .scanner-line {
+          animation: moveDown 2s ease-in-out infinite;
+        }
+
+        @keyframes moveDown {
+          0% {
+            top: 0%;
+          }
+          50% {
+            top: 90%;
+          }
+          100% {
+            top: 0%;
+          }
+        }
+      `}</style>
     </Card>
   );
 };

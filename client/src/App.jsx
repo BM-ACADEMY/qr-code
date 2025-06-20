@@ -2,9 +2,16 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScanLine, Play, Square } from "lucide-react";
 
 const Deduct = () => {
@@ -95,7 +102,7 @@ const Deduct = () => {
         >
           {!scanning && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <ScanLine className="text-[#000066] w-20 h-20 opacity-70" />
+              <ScanLine className="w-40 h-40 text-[#00004d] opacity-90" />
             </div>
           )}
         </div>
@@ -120,50 +127,54 @@ const Deduct = () => {
       </Card>
 
       {/* Right - Customer Info & Deduct */}
-      <Card className="flex-1 p-6">
-        <h2 className="text-xl font-semibold mb-4 text-[#0b1d4d]">
-          Customer Details
-        </h2>
-
-        {customer.name ? (
-          <div className="border p-4 rounded-lg bg-[#f9fafc]">
-            <div className="flex justify-between items-center mb-2">
-              <div>
-                <p className="font-bold text-lg">{customer.name}</p>
-                <p className="text-sm text-gray-600">ID: {customer.id}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Balance</p>
-                <p className="text-xl font-bold text-blue-700">
-                  ₹{customer.balance}
-                </p>
-              </div>
+      <Card className="flex-1">
+        <CardHeader>
+          <CardTitle>Customer Details</CardTitle>
+          <CardDescription>
+            Scan QR to fetch customer details and deduct points.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <p className="font-semibold text-lg">
+                Name: {customer.name || "null"}
+              </p>
+              <p className="text-sm text-gray-500">
+                ID: {customer.id || "null"}
+              </p>
             </div>
-
-            <div className="mt-4 space-y-2">
-              <label className="text-sm font-medium">Deduct Points</label>
-              <div className="flex gap-2 items-center">
-                <span className="pt-2">₹</span>
-                <Input
-                  type="number"
-                  placeholder="Amount to deduct"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </div>
-              <Button
-                className="w-full mt-2 bg-[#1a2f87] text-white"
-                onClick={handleDeduct}
-              >
-                Deduct Points
-              </Button>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Balance</p>
+              <p className="text-xl font-bold text-blue-700">
+                ₹{customer.balance ?? 0}
+              </p>
             </div>
           </div>
-        ) : (
-          <p className="text-gray-500 text-sm">
-            Please scan a QR code to load customer details.
-          </p>
-        )}
+
+          <div className="space-y-1">
+            <Label htmlFor="deductAmount" className="text-sm">
+              Deduct Points
+            </Label>
+            <div className="flex items-center gap-2">
+              <span className="text-base pt-1">₹</span>
+              <Input
+                id="deductAmount"
+                type="number"
+                className="h-8 px-3 text-sm"
+                placeholder="Amount to deduct"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <Button
+              className="w-full mt-2 h-8 px-3 py-1 text-xs bg-[#1a2f87] text-white"
+              onClick={handleDeduct}
+            >
+              Deduct Points
+            </Button>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

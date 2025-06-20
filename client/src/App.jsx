@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 export default function QrScanner() {
-  const qrRef = useRef(null);
+  const qrRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState("");
@@ -22,17 +22,16 @@ export default function QrScanner() {
 
   const startScanner = async () => {
     setCameraError("");
-    const qrRegionId = "qr-reader";
     
-    // Clear any previous instance
-    if (html5QrCodeRef.current) {
-      await stopScanner();
-    }
-
-    const html5QrCode = new Html5Qrcode(qrRegionId);
-    html5QrCodeRef.current = html5QrCode;
-
     try {
+      // Clear any previous instance
+      if (html5QrCodeRef.current) {
+        await stopScanner();
+      }
+
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCodeRef.current = html5QrCode;
+
       const cameras = await Html5Qrcode.getCameras();
       if (cameras && cameras.length > 0) {
         const cameraId = cameras[0].id;
@@ -57,10 +56,11 @@ export default function QrScanner() {
     } catch (err) {
       console.error("Camera start failed:", err);
       setCameraError("Failed to access camera. Please check permissions.");
+      html5QrCodeRef.current = null;
     }
   };
 
-  const handleScanSuccess = (decodedText) => {
+  const handleScanSuccess = (decodedText: string) => {
     try {
       const data = JSON.parse(decodedText);
       if (!data.name || !data.id || typeof data.balance !== "number") {
@@ -83,10 +83,11 @@ export default function QrScanner() {
     if (html5QrCodeRef.current) {
       try {
         await html5QrCodeRef.current.stop();
-        html5QrCodeRef.current = null;
         setScanning(false);
       } catch (err) {
         console.error("Stop failed:", err);
+      } finally {
+        html5QrCodeRef.current = null;
       }
     }
   };
@@ -103,12 +104,13 @@ export default function QrScanner() {
       return;
     }
 
-    setCustomer((prev) => ({
+    const newBalance = customer.balance - deductAmount;
+    setCustomer(prev => ({
       ...prev,
-      balance: prev.balance - deductAmount,
+      balance: newBalance,
     }));
     setAmount("");
-    alert(`Payment successful! New balance: ₹${customer.balance - deductAmount}`);
+    alert(`Payment successful! New balance: ₹${newBalance}`);
   };
 
   useEffect(() => {

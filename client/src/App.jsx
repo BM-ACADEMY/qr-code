@@ -12,6 +12,7 @@ export default function QrScanner() {
   const qrRef = useRef(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [cameraError, setCameraError] = useState("");
   const [customer, setCustomer] = useState({
     name: "",
     id: "",
@@ -20,40 +21,61 @@ export default function QrScanner() {
   const [amount, setAmount] = useState("");
 
   const startScanner = async () => {
+    setCameraError("");
     const qrRegionId = "qr-reader";
+    
+    // Clear any previous instance
+    if (html5QrCodeRef.current) {
+      await stopScanner();
+    }
+
     const html5QrCode = new Html5Qrcode(qrRegionId);
     html5QrCodeRef.current = html5QrCode;
 
     try {
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 300, height: 150 } },
-        (decodedText) => {
-          try {
-            const data = JSON.parse(decodedText);
-            if (!data.name || !data.id || typeof data.balance !== "number") {
-              alert("Invalid QR code data.");
-              return;
-            }
-            setCustomer({
-              name: data.name,
-              id: data.id,
-              balance: data.balance,
-            });
-            stopScanner();
-          } catch (err) {
-            console.error("QR parse error:", err);
-            alert("Failed to parse QR code.");
+      const cameras = await Html5Qrcode.getCameras();
+      if (cameras && cameras.length > 0) {
+        const cameraId = cameras[0].id;
+        
+        await html5QrCode.start(
+          cameraId,
+          { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 } 
+          },
+          (decodedText) => {
+            handleScanSuccess(decodedText);
+          },
+          (error) => {
+            console.warn("QR scan error:", error);
           }
-        },
-        (error) => {
-          console.warn("QR scan error:", error);
-        }
-      );
-      setScanning(true);
+        );
+        setScanning(true);
+      } else {
+        setCameraError("No cameras found");
+      }
     } catch (err) {
       console.error("Camera start failed:", err);
-      alert("Failed to start camera. Please allow camera access.");
+      setCameraError("Failed to access camera. Please check permissions.");
+    }
+  };
+
+  const handleScanSuccess = (decodedText) => {
+    try {
+      const data = JSON.parse(decodedText);
+      if (!data.name || !data.id || typeof data.balance !== "number") {
+        alert("Invalid QR code data. Please scan a valid customer QR.");
+        return;
+      }
+      setCustomer({
+        name: data.name,
+        id: data.id,
+        balance: data.balance,
+      });
+      stopScanner();
+    } catch (err) {
+      console.error("QR parse error:", err);
+      alert("Failed to parse QR code. Please scan a valid customer QR.");
     }
   };
 
@@ -61,7 +83,7 @@ export default function QrScanner() {
     if (html5QrCodeRef.current) {
       try {
         await html5QrCodeRef.current.stop();
-        await html5QrCodeRef.current.clear();
+        html5QrCodeRef.current = null;
         setScanning(false);
       } catch (err) {
         console.error("Stop failed:", err);
@@ -72,12 +94,12 @@ export default function QrScanner() {
   const handleDeduct = () => {
     const deductAmount = parseFloat(amount);
     if (isNaN(deductAmount) || deductAmount <= 0) {
-      alert("Please enter a valid amount.");
+      alert("Please enter a valid amount greater than 0.");
       return;
     }
 
     if (deductAmount > customer.balance) {
-      alert("Insufficient balance.");
+      alert(`Insufficient balance. Current balance: ₹${customer.balance}`);
       return;
     }
 
@@ -86,11 +108,15 @@ export default function QrScanner() {
       balance: prev.balance - deductAmount,
     }));
     setAmount("");
-    alert("Payment successful!");
+    alert(`Payment successful! New balance: ₹${customer.balance - deductAmount}`);
   };
 
   useEffect(() => {
-    return () => stopScanner();
+    return () => {
+      if (html5QrCodeRef.current) {
+        stopScanner();
+      }
+    };
   }, []);
 
   return (
@@ -114,6 +140,9 @@ export default function QrScanner() {
               )}
               <div id="qr-reader" ref={qrRef} className="w-full h-full" />
             </div>
+            {cameraError && (
+              <p className="text-red-500 text-sm mt-2 text-center">{cameraError}</p>
+            )}
           </div>
 
           <div className="mt-6 w-full flex justify-center">
@@ -149,16 +178,16 @@ export default function QrScanner() {
               <div className="mb-6 flex justify-between items-center">
                 <div>
                   <p className="font-semibold text-lg">
-                    Name: {customer.name || "null"}
+                    Name: {customer.name || "Not scanned"}
                   </p>
                   <p className="text-sm text-gray-500">
-                    ID: {customer.id || "null"}
+                    ID: {customer.id || "Not scanned"}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">Balance</p>
                   <p className="text-xl font-bold text-blue-700">
-                    ₹{customer.balance ?? 0}
+                    ₹{customer.balance.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -172,14 +201,18 @@ export default function QrScanner() {
                   <Input
                     id="deductAmount"
                     type="number"
+                    min="0"
+                    step="0.01"
                     className="h-8 px-3 text-sm"
                     placeholder="Amount to deduct"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
+                    disabled={!customer.id}
                   />
                 </div>
                 <Button
                   onClick={handleDeduct}
+                  disabled={!customer.id || !amount}
                   className="w-full mt-2 h-8 px-3 py-1 text-xs bg-[#1a2f87] text-white"
                 >
                   Deduct Points

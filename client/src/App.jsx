@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
 export default function QrScanner() {
-  const qrRef = useRef<HTMLDivElement>(null);
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const qrRef = useRef(null);
+  const html5QrCodeRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [customer, setCustomer] = useState({
@@ -60,7 +60,7 @@ export default function QrScanner() {
     }
   };
 
-  const handleScanSuccess = (decodedText: string) => {
+  const handleScanSuccess = (decodedText) => {
     try {
       const data = JSON.parse(decodedText);
       if (!data.name || !data.id || typeof data.balance !== "number") {

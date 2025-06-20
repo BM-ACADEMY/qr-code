@@ -57,7 +57,6 @@ export default function QrScanner() {
           { 
             fps: 10, 
             qrbox: { width: 300, height: 150  },
-            aspectRatio: 1.777778
            
           },
           (decodedText) => {
@@ -75,7 +74,6 @@ export default function QrScanner() {
           { 
             fps: 10, 
             qrbox: { width: 300, height: 150  },
-            aspectRatio: 1.777778
           },
           (decodedText) => {
             handleScanSuccess(decodedText);

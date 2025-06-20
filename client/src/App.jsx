@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { ScanLine, Play, Square } from "lucide-react";
 
 const Deduct = () => {
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const qrCodeRef = useRef<Html5Qrcode | null>(null);
   const [scanning, setScanning] = useState(false);
   const [amount, setAmount] = useState("");
   const [customer, setCustomer] = useState({
@@ -26,8 +26,10 @@ const Deduct = () => {
 
   const startScanner = async () => {
     const qrRegionId = "qr-reader";
+    if (qrCodeRef.current) return; // prevent duplicate instances
+
     const html5QrCode = new Html5Qrcode(qrRegionId);
-    html5QrCodeRef.current = html5QrCode;
+    qrCodeRef.current = html5QrCode;
 
     try {
       await html5QrCode.start(
@@ -51,24 +53,24 @@ const Deduct = () => {
             alert("Failed to parse QR code.");
           }
         },
-        (error) => {
-          console.warn("QR scan error:", error);
-        }
+        (err) => console.warn("Scan error", err)
       );
+
       setScanning(true);
-    } catch (err) {
-      console.error("Camera error:", err);
-      alert("Failed to start camera. Please allow camera access.");
+    } catch (error) {
+      console.error("Camera access error:", error);
+      alert("Camera access failed. Please check browser permissions.");
     }
   };
 
   const stopScanner = async () => {
-    if (html5QrCodeRef.current) {
+    if (qrCodeRef.current) {
       try {
-        await html5QrCodeRef.current.stop();
-        await html5QrCodeRef.current.clear();
-      } catch (err) {
-        console.error("Stop scanner failed:", err);
+        await qrCodeRef.current.stop();
+        await qrCodeRef.current.clear();
+        qrCodeRef.current = null;
+      } catch (error) {
+        console.error("Stop scanner error:", error);
       }
       setScanning(false);
     }
@@ -92,7 +94,7 @@ const Deduct = () => {
 
   useEffect(() => {
     return () => {
-      stopScanner();
+      stopScanner(); // Clean up on unmount
     };
   }, []);
 
@@ -109,7 +111,7 @@ const Deduct = () => {
         >
           {!scanning && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <ScanLine className="w-40 h-40 text-[#00004d] opacity-90" />
+              <ScanLine className="w-32 h-32 text-[#00004d] opacity-80" />
             </div>
           )}
         </div>

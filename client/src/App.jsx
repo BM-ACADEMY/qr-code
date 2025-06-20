@@ -198,7 +198,7 @@ const QrScanner = () => {
             top: 0%;
           }
           50% {
-            top: 90%;
+            top: 100%;
           }
           100% {
             top: 0%;

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 
 const QrScanner = () => {
   const qrRef = useRef(null);
@@ -27,10 +28,10 @@ const QrScanner = () => {
 
     try {
       await html5QrCode.start(
-        { facingMode: "environment" }, // Force back camera
+        { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 300, height: 150 }, // RECTANGULAR scanning box
+          qrbox: { width: 300, height: 150 },
         },
         (decodedText) => {
           setResult(decodedText);
@@ -75,26 +76,81 @@ const QrScanner = () => {
 
   useEffect(() => {
     return () => {
-      stopScanner(); // Cleanup on unmount
+      stopScanner();
     };
   }, []);
 
   return (
-    <div className="max-w-xl mx-auto pt-24 text-center">
-      <h1 className="text-2xl font-bold mb-4">QR Code Scanner</h1>
+    <Card className="mt-10 w-full max-w-6xl p-8 rounded-2xl shadow-md bg-white mx-auto">
+      <h2 className="text-2xl font-bold text-[#00004d] mb-6 text-center">
+        QR Code Scanner
+      </h2>
 
-      {!scanning ? (
-        <Button onClick={startScanner}>Start Scanner</Button>
-      ) : (
-        <Button onClick={stopScanner}>Stop Scanner</Button>
-      )}
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Left: QR Scanner */}
+        <div className="flex-1 flex flex-col items-center">
+          <div className="relative w-full max-w-sm border-2 border-dashed border-[#000052] rounded-xl p-4 bg-[#f5f6fb] shadow-inner">
+            <p className="absolute -top-4 left-4 text-xs font-medium bg-white px-2 py-0.5 rounded shadow text-[#000052]">
+              Scan Live QR
+            </p>
+            <div
+              id="qr-reader"
+              ref={qrRef}
+              className="w-full h-48 mx-auto rounded-md overflow-hidden"
+            />
+          </div>
 
-      <div
-        id="qr-reader"
-        ref={qrRef}
-        className="w-full h-[300px] mx-auto mt-6 rounded-md overflow-hidden"
-      />
+          <div className="mt-4 text-center">
+            {!scanning ? (
+              <Button
+                onClick={startScanner}
+                className="bg-[#000066] hover:bg-[#000080] text-white text-sm"
+              >
+                Start Scanner
+              </Button>
+            ) : (
+              <Button
+                onClick={stopScanner}
+                className="bg-red-600 hover:bg-red-700 text-white text-sm"
+              >
+                Stop Scanner
+              </Button>
+            )}
+          </div>
+        </div>
 
+        {/* Right: Info Box */}
+        <div className="flex-1 bg-white/50 backdrop-blur-lg border border-gray-200 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <QrCode className="w-6 h-6 text-[#00004d]" />
+            <h3 className="text-lg font-semibold text-[#00004d]">
+              Scan Any QR to Get Details
+            </h3>
+          </div>
+
+          <p className="text-sm text-gray-600 mb-4">
+            Use this QR scanner to instantly fetch links, transaction IDs, or
+            wallet details. Works with UPI QR codes, payment links, and more.
+          </p>
+
+          <ul className="space-y-3 text-gray-700 text-sm">
+            <li className="flex items-start gap-2">
+              <span className="text-[#000066] font-semibold">•</span>
+              Ensure proper lighting and steady hand while scanning.
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#000066] font-semibold">•</span>
+              The scanner uses your rear camera (mobile devices only).
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#000066] font-semibold">•</span>
+              Use the copy or open options once QR is detected.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Dialog: Scan Result */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
@@ -122,7 +178,7 @@ const QrScanner = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 };
 

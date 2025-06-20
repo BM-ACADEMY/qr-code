@@ -22,8 +22,16 @@ const Deduct = () => {
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 300, height: 150 } },
         (decodedText) => {
+          console.log("Scanned text:", decodedText); // ✅ Debugging
+
           try {
-            const data = JSON.parse(decodedText);
+            let data = JSON.parse(decodedText);
+
+            // If it's a string inside a string, parse again
+            if (typeof data === "string") {
+              data = JSON.parse(data);
+            }
+
             setCustomer({
               name: data.name || "",
               id: data.id || "",
@@ -31,7 +39,9 @@ const Deduct = () => {
             });
           } catch (err) {
             console.error("Invalid QR JSON:", err);
+            setCustomer({ name: "", id: "", balance: 0 });
           }
+
           stopScanner();
         },
         (err) => console.warn("QR scan error:", err)
@@ -73,7 +83,11 @@ const Deduct = () => {
       {/* Left: QR Scanner */}
       <Card className="flex-1 p-6">
         <h2 className="text-xl font-semibold mb-4">Scan Customer QR Code</h2>
-        <div id="qr-reader" ref={qrRef} className="w-full h-60 bg-gray-100 rounded" />
+        <div
+          id="qr-reader"
+          ref={qrRef}
+          className="w-full h-60 bg-gray-100 rounded"
+        />
 
         <div className="mt-4">
           {!scanning ? (
@@ -101,7 +115,9 @@ const Deduct = () => {
 
             <div className="mb-4">
               <p className="text-sm text-gray-600">Balance</p>
-              <p className="text-2xl font-bold text-blue-700">₹{customer.balance}</p>
+              <p className="text-2xl font-bold text-blue-700">
+                ₹{customer.balance}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -115,13 +131,18 @@ const Deduct = () => {
                   type="number"
                 />
               </div>
-              <Button onClick={handleDeduct} className="w-full bg-blue-800 text-white mt-2">
+              <Button
+                onClick={handleDeduct}
+                className="w-full bg-blue-800 text-white mt-2"
+              >
                 Deduct Points
               </Button>
             </div>
           </>
         ) : (
-          <p className="text-gray-500">Scan a QR code to view customer details.</p>
+          <p className="text-gray-500">
+            Scan a QR code to view customer details.
+          </p>
         )}
       </Card>
     </div>

@@ -287,7 +287,7 @@ export default function QrScanner() {
           { 
             fps: 10, 
             qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.777778 // 16:9 aspect ratio
+           
           },
           (decodedText) => {
             handleScanSuccess(decodedText);

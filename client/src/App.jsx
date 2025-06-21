@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export default function QrScanner() {
+export default function Refund() {
   const qrRef = useRef(null);
   const html5QrCodeRef = useRef(null);
   const [scanning, setScanning] = useState(false);
@@ -129,29 +129,22 @@ export default function QrScanner() {
     }
   };
 
-  const handleDeduct = () => {
-    const deductAmount = parseFloat(amount);
-    if (isNaN(deductAmount) || deductAmount <= 0) {
+  const handleRefund = () => {
+    const refundAmount = parseFloat(amount);
+    if (isNaN(refundAmount) || refundAmount <= 0) {
       setResultMessage("Please enter a valid amount greater than 0.");
       setIsSuccess(false);
       setShowResultDialog(true);
       return;
     }
 
-    if (deductAmount > customer.balance) {
-      setResultMessage(`Insufficient balance. Current balance: ₹${customer.balance}`);
-      setIsSuccess(false);
-      setShowResultDialog(true);
-      return;
-    }
-
-    const newBalance = customer.balance - deductAmount;
+    const newBalance = customer.balance + refundAmount;
     setCustomer(prev => ({
       ...prev,
       balance: newBalance,
     }));
     setAmount("");
-    setResultMessage(`Payment successful! New balance: ₹${newBalance}`);
+    setResultMessage(`Refund successful! New balance: ₹${newBalance.toFixed(2)}`);
     setIsSuccess(true);
     setShowResultDialog(true);
   };
@@ -168,7 +161,7 @@ export default function QrScanner() {
     <>
       <Card className="mt-10 w-full max-w-6xl p-8 rounded-2xl shadow-md bg-white mx-auto">
         <h2 className="text-2xl font-bold text-[#00004d] mb-6 text-left">
-          QR Code Scanner
+          Refund QRCode Scanner
         </h2>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -221,7 +214,7 @@ export default function QrScanner() {
               <CardHeader>
                 <CardTitle>Customer Details</CardTitle>
                 <CardDescription>
-                  Scan QR to fetch customer details and deduct points.
+                  Scan QR to fetch customer details and Refund points.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -244,7 +237,7 @@ export default function QrScanner() {
 
                 <div className="space-y-1">
                   <Label htmlFor="deductAmount" className="text-sm">
-                    Deduct Points
+                    Refund Amount
                   </Label>
                   <div className="flex items-center gap-2">
                     <span className="text-base pt-1">₹</span>
@@ -254,18 +247,18 @@ export default function QrScanner() {
                       min="0"
                       step="0.01"
                       className="h-8 px-3 text-sm"
-                      placeholder="Amount to deduct"
+                      placeholder="Amount to Refund"
                       value={amount}
                       onChange={e => setAmount(e.target.value)}
                       disabled={!customer.id}
                     />
                   </div>
                   <Button
-                    onClick={handleDeduct}
+                    onClick={handleRefund}
                     disabled={!customer.id || !amount}
                     className="w-full mt-2 h-8 px-3 py-1 text-xs bg-[#1a2f87] text-white"
                   >
-                    Deduct Points
+                    Refund Points
                   </Button>
                 </div>
               </CardContent>

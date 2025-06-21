@@ -284,7 +284,6 @@
 //     </>
 //   );
 // }
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -307,15 +306,12 @@ import {
 } from "@/components/ui/dialog";
 import { QrCode, IndianRupee, ScanLine } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
-import TopUpSuccess from "./success";
 
 function TopUpOnlineUser() {
   const [scannedData, setScannedData] = useState(null);
   const [amount, setAmount] = useState("");
   const [remarks, setRemarks] = useState("");
   const [selectedMethod, setSelectedMethod] = useState(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [topUpData, setTopUpData] = useState(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
 
@@ -337,39 +333,26 @@ function TopUpOnlineUser() {
       balance: "₹2000",
       editable: true,
     },
-    {
-      name: "John Doe",
-      date: "15/6/2025 01:28 pm",
-      method: "Mess Bill • My son will eat",
-      amount: "+₹1000",
-      balance: "₹1500",
-      editable: false,
-    },
   ];
 
+  // 📷 QR Code Scanner Setup
   const startScanner = async () => {
     setCameraError("");
     try {
-      if (html5QrCodeRef.current) {
-        await stopScanner();
-      }
+      if (html5QrCodeRef.current) await stopScanner();
 
       const html5QrCode = new Html5Qrcode("qr-reader");
       html5QrCodeRef.current = html5QrCode;
 
       await html5QrCode.start(
         { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 300, height: 350 },
-        },
+        { fps: 10, qrbox: { width: 300, height: 300 } },
         handleScanSuccess,
-        error => console.warn("QR scan error:", error)
+        (err) => console.warn("QR scan error:", err)
       );
     } catch (err) {
       console.error("Camera start failed:", err);
       setCameraError("Failed to access camera. Please check permissions.");
-      html5QrCodeRef.current = null;
     }
   };
 
@@ -378,112 +361,94 @@ function TopUpOnlineUser() {
       try {
         await html5QrCodeRef.current.stop();
       } catch (err) {
-        console.error("Stop failed:", err);
+        console.error("Scanner stop error:", err);
       } finally {
+        html5QrCodeRef.current.clear();
         html5QrCodeRef.current = null;
       }
     }
   };
 
-const handleScanSuccess = (decodedText) => {
-  try {
-    let data;
-
-    // Try JSON first
+  // ✅ QR Code Handler
+  const handleScanSuccess = (decodedText) => {
+    console.log("Scanned Text:", decodedText);
     try {
-      data = JSON.parse(decodedText);
-    } catch (jsonErr) {
-      // Fallback to custom parsing for key-value string
-      const regex = /name[:=]\s*(.+?),\s*email[:=]\s*(.+?),\s*balance[:=]\s*(\d+)/i;
-      const match = decodedText.match(regex);
+      let data;
 
-      if (match) {
-        data = {
-          name: match[1].trim(),
-          email: match[2].trim(),
-          balance: parseFloat(match[3]),
-        };
-      } else {
-        throw new Error("Unrecognized QR format");
+      // Try JSON first
+      try {
+        data = JSON.parse(decodedText);
+      } catch {
+        // Fallback to key=value format
+        const regex = /name[:=]\s*(.+?),\s*email[:=]\s*(.+?),\s*balance[:=]\s*(\d+)/i;
+        const match = decodedText.match(regex);
+        if (match) {
+          data = {
+            name: match[1].trim(),
+            email: match[2].trim(),
+            balance: parseFloat(match[3]),
+          };
+        } else {
+          throw new Error("Invalid format");
+        }
       }
+
+      if (!data.name || !data.email || isNaN(data.balance)) {
+        alert("Invalid QR Code data");
+        return;
+      }
+
+      setScannedData(data);
+      setScannerOpen(false);
+      stopScanner();
+    } catch (error) {
+      console.error("QR Parse Error:", error);
+      alert("Invalid QR Code format");
     }
-
-    if (!data.name || !data.email || isNaN(data.balance)) {
-      alert("Invalid QR code data.");
-      return;
-    }
-
-    setScannedData({
-      name: data.name,
-      email: data.email,
-      balance: data.balance,
-    });
-
-    setScannerOpen(false);
-    stopScanner();
-  } catch (err) {
-    console.error("QR parse error:", err);
-    alert("Failed to parse QR code. Please scan a valid customer QR.");
-  }
-};
-
-
-
+  };
 
   useEffect(() => {
     if (scannerOpen) {
-      const delayStart = setTimeout(() => startScanner(), 300); // allow DOM render
+      const timeout = setTimeout(() => startScanner(), 300);
       return () => {
-        clearTimeout(delayStart);
+        clearTimeout(timeout);
         stopScanner();
       };
     }
   }, [scannerOpen]);
 
-  const handleKeyClick = key => {
+  const handleKeyClick = (key) => {
     if (key === "C") {
       setAmount("");
     } else {
-      setAmount(prev => prev + key);
+      setAmount((prev) => prev + key);
     }
   };
 
-const handleTopUp = () => {
-  const transactionId = "TXN" + Math.floor(1000000000 + Math.random() * 9000000000);
-  const newBalance = scannedData.balance + parseFloat(amount);
-
-  setTopUpData({
-    name: scannedData.name,
-    amount,
-    method: selectedMethod.charAt(0).toUpperCase() + selectedMethod.slice(1),
-    newBalance,
-    transactionId,
-  });
-
-  setShowSuccess(true);
-};
-
-
-  if (showSuccess) {
-    return (
-      <TopUpSuccess data={topUpData} onNewTopUp={() => setShowSuccess(false)} />
-    );
-  }
+  const handleTopUp = () => {
+    if (!scannedData || !amount || !selectedMethod) return;
+    const newBalance = scannedData.balance + parseFloat(amount);
+    alert(`Top-up successful!\nNew Balance: ₹${newBalance}`);
+    setAmount("");
+    setSelectedMethod(null);
+    setScannedData(null);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 px-4 m-0">
-      <Card className="w-full max-w-xl shadow-2xl border rounded-2xl overflow-hidden m-0">
-        <CardHeader className="bg-[#070149] p-4 rounded-t-2xl m-0">
-          <CardTitle className="flex items-center gap-2 text-xl text-white m-0">
-            <QrCode className="w-6 h-6 text-green-400" />
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 px-4">
+      <Card className="w-full max-w-xl shadow-xl rounded-2xl">
+        <CardHeader className="bg-[#070149] text-white p-4 rounded-t-2xl">
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="w-5 h-5 text-green-400" />
             Top Up - Online User
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="space-y-4 p-6 pt-0">
+        <CardContent className="p-6 space-y-4">
+          {/* SCANNER */}
           <Dialog open={scannerOpen} onOpenChange={setScannerOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="w-full h-12 text-base">
+              <Button variant="outline" className="w-full h-12">
                 <QrCode className="w-5 h-5 mr-2 text-blue-600" />
                 Scan QR Code
               </Button>
@@ -495,7 +460,7 @@ const handleTopUp = () => {
               <div className="relative w-full h-64 bg-gray-100 border border-dashed border-[#070149] rounded-lg overflow-hidden">
                 {!html5QrCodeRef.current && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <ScanLine className="w-20 h-20 text-[#070149]" />
+                    <ScanLine className="w-16 h-16 text-[#070149]" />
                   </div>
                 )}
                 <div id="qr-reader" ref={qrRef} className="w-full h-full" />
@@ -505,22 +470,23 @@ const handleTopUp = () => {
               )}
               <Button
                 onClick={() => setScannerOpen(false)}
-                className="mt-4 bg-[#070149] hover:bg-[#3f3b6d] text-white"
+                className="mt-4 bg-[#070149] text-white hover:opacity-90"
               >
                 Close
               </Button>
             </DialogContent>
           </Dialog>
 
-        {scannedData && (
-  <div className="space-y-1 bg-gray-100 p-3 rounded-md text-sm">
-    <p><strong>Name:</strong> {scannedData.name}</p>
-    <p><strong>Email:</strong> {scannedData.email}</p>
-    <p><strong>Current Balance:</strong> ₹{scannedData.balance}</p>
-  </div>
-)}
+          {/* DISPLAY SCANNED USER */}
+          {scannedData && (
+            <div className="bg-gray-100 p-3 rounded-md text-sm space-y-1">
+              <p><strong>Name:</strong> {scannedData.name}</p>
+              <p><strong>Email:</strong> {scannedData.email}</p>
+              <p><strong>Current Balance:</strong> ₹{scannedData.balance}</p>
+            </div>
+          )}
 
-
+          {/* Amount Input */}
           <div>
             <label className="block text-sm font-medium mb-1">Enter Amount</label>
             <Input
@@ -530,49 +496,46 @@ const handleTopUp = () => {
             />
           </div>
 
+          {/* Numpad */}
           <div className="grid grid-cols-3 gap-3">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "C"].map(
-              (key) => (
-                <Button
-                  key={key}
-                  onClick={() => handleKeyClick(key)}
-                  variant="secondary"
-                  className="h-12 text-base"
-                >
-                  {key}
-                </Button>
-              )
-            )}
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "C"].map((key) => (
+              <Button
+                key={key}
+                onClick={() => handleKeyClick(key)}
+                variant="secondary"
+                className="h-12 text-lg"
+              >
+                {key}
+              </Button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-3 mt-4">
+          {/* Payment Methods */}
+          <div className="grid grid-cols-3 gap-3">
             {paymentMethods.map((method) => (
               <button
                 key={method.label}
                 onClick={() => setSelectedMethod(method.label.toLowerCase())}
-                className={`h-12 text-base border rounded-md transition-all
-                  ${
-                    selectedMethod === method.label.toLowerCase()
-                      ? "border-[#070149] text-[#070149] font-semibold"
-                      : "border-gray-300 text-gray-600"
-                  }
-                `}
+                className={`h-12 border rounded-md transition-all ${
+                  selectedMethod === method.label.toLowerCase()
+                    ? "border-[#070149] text-[#070149] font-semibold"
+                    : "border-gray-300 text-gray-600"
+                }`}
               >
-                <span className="text-lg mr-1">{method.icon}</span>
+                <span className="mr-1">{method.icon}</span>
                 {method.label}
               </button>
             ))}
           </div>
 
+          {/* Remarks */}
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Remarks (optional)
-            </label>
+            <label className="block text-sm font-medium mb-1">Remarks (optional)</label>
             <Textarea
-              placeholder="Enter any remarks..."
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               className="h-24"
+              placeholder="Enter any remarks..."
             />
           </div>
         </CardContent>
@@ -580,47 +543,17 @@ const handleTopUp = () => {
         <CardFooter className="flex justify-end px-6 pb-6">
           <Button
             disabled={!scannedData || !amount || !selectedMethod}
-            className="h-12 text-base bg-[#070149] text-white hover:opacity-90"
             onClick={handleTopUp}
+            className="bg-[#070149] text-white h-12 w-full hover:opacity-90"
           >
-            <IndianRupee className="w-5 h-5 mr-2 text-white" />
+            <IndianRupee className="w-5 h-5 mr-2" />
             Top Up
           </Button>
         </CardFooter>
       </Card>
-
-      {/* Transaction History Table */}
-      <div className="w-full max-w-xl mt-6 rounded-2xl shadow-lg overflow-hidden bg-white">
-        <div className="bg-[#070149] text-white font-bold text-lg px-6 py-3">
-          Transaction History
-        </div>
-
-        {transactions.map((txn, index) => (
-          <div
-            key={index}
-            className="flex justify-between items-start px-6 py-4 border-b last:border-none"
-          >
-            <div>
-              <div className="font-semibold text-base">{txn.name}</div>
-              <div className="text-sm text-gray-500">{txn.date}</div>
-              <div className="text-sm text-gray-500">{txn.method}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-green-600 font-semibold">{txn.amount}</div>
-              <div className="text-sm text-gray-500">
-                Balance: {txn.balance}
-              </div>
-              {txn.editable && (
-                <button className="text-sm text-[#070149] font-semibold mt-1">
-                  Edit
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
 
 export default TopUpOnlineUser;
+s

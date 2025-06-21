@@ -307,6 +307,7 @@ import {
 } from "@/components/ui/dialog";
 import { QrCode, IndianRupee, ScanLine } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
+import TopUpSuccess from "./success";
 
 function TopUpOnlineUser() {
   const [scannedData, setScannedData] = useState(null);
@@ -336,12 +337,22 @@ function TopUpOnlineUser() {
       balance: "₹2000",
       editable: true,
     },
+    {
+      name: "John Doe",
+      date: "15/6/2025 01:28 pm",
+      method: "Mess Bill • My son will eat",
+      amount: "+₹1000",
+      balance: "₹1500",
+      editable: false,
+    },
   ];
 
   const startScanner = async () => {
     setCameraError("");
     try {
-      if (html5QrCodeRef.current) await stopScanner();
+      if (html5QrCodeRef.current) {
+        await stopScanner();
+      }
 
       const html5QrCode = new Html5Qrcode("qr-reader");
       html5QrCodeRef.current = html5QrCode;
@@ -374,102 +385,242 @@ function TopUpOnlineUser() {
     }
   };
 
-  const handleScanSuccess = (decodedText) => {
+const handleScanSuccess = (decodedText) => {
+  try {
+    let data;
+
+    // Try JSON first
     try {
-      let data;
-      try {
-        data = JSON.parse(decodedText);
-      } catch {
-        const regex = /name[:=]\s*(.+?),\s*email[:=]\s*(.+?),\s*balance[:=]\s*(\d+)/i;
-        const match = decodedText.match(regex);
-        if (match) {
-          data = {
-            name: match[1].trim(),
-            email: match[2].trim(),
-            balance: parseFloat(match[3]),
-          };
-        } else {
-          throw new Error("Unrecognized QR format");
-        }
-      }
+      data = JSON.parse(decodedText);
+    } catch (jsonErr) {
+      // Fallback to custom parsing for key-value string
+      const regex = /name[:=]\s*(.+?),\s*email[:=]\s*(.+?),\s*balance[:=]\s*(\d+)/i;
+      const match = decodedText.match(regex);
 
-      if (!data.name || !data.email || isNaN(data.balance)) {
-        alert("Invalid QR code data.");
-        return;
+      if (match) {
+        data = {
+          name: match[1].trim(),
+          email: match[2].trim(),
+          balance: parseFloat(match[3]),
+        };
+      } else {
+        throw new Error("Unrecognized QR format");
       }
-
-      setScannedData(data);
-      setScannerOpen(false);
-      stopScanner();
-    } catch (err) {
-      console.error("QR parse error:", err);
-      alert("Failed to parse QR code.");
     }
-  };
+
+    if (!data.name || !data.email || isNaN(data.balance)) {
+      alert("Invalid QR code data.");
+      return;
+    }
+
+    setScannedData({
+      name: data.name,
+      email: data.email,
+      balance: data.balance,
+    });
+
+    setScannerOpen(false);
+    stopScanner();
+  } catch (err) {
+    console.error("QR parse error:", err);
+    alert("Failed to parse QR code. Please scan a valid customer QR.");
+  }
+};
+
+
+
 
   useEffect(() => {
     if (scannerOpen) {
-      const delay = setTimeout(() => startScanner(), 300);
+      const delayStart = setTimeout(() => startScanner(), 300); // allow DOM render
       return () => {
-        clearTimeout(delay);
+        clearTimeout(delayStart);
         stopScanner();
       };
     }
   }, [scannerOpen]);
 
   const handleKeyClick = key => {
-    if (key === "C") setAmount("");
-    else setAmount(prev => prev + key);
+    if (key === "C") {
+      setAmount("");
+    } else {
+      setAmount(prev => prev + key);
+    }
   };
 
-  const handleTopUp = () => {
-    const transactionId = "TXN" + Math.floor(1000000000 + Math.random() * 9000000000);
-    const newBalance = scannedData.balance + parseFloat(amount);
+const handleTopUp = () => {
+  const transactionId = "TXN" + Math.floor(1000000000 + Math.random() * 9000000000);
+  const newBalance = scannedData.balance + parseFloat(amount);
 
-    setTopUpData({
-      name: scannedData.name,
-      amount,
-      method: selectedMethod,
-      newBalance,
-      transactionId,
-    });
+  setTopUpData({
+    name: scannedData.name,
+    amount,
+    method: selectedMethod.charAt(0).toUpperCase() + selectedMethod.slice(1),
+    newBalance,
+    transactionId,
+  });
 
-    setShowSuccess(true);
-  };
+  setShowSuccess(true);
+};
 
-  if (showSuccess && topUpData) {
+
+  if (showSuccess) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 py-10">
-        <div className="bg-white shadow-lg rounded-xl p-8 max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold text-green-600 mb-4">Top Up Successful!</h2>
-          <p className="mb-2"><strong>Name:</strong> {topUpData.name}</p>
-          <p className="mb-2"><strong>Amount:</strong> ₹{topUpData.amount}</p>
-          <p className="mb-2"><strong>Method:</strong> {topUpData.method}</p>
-          <p className="mb-2"><strong>New Balance:</strong> ₹{topUpData.newBalance}</p>
-          <p className="mb-4"><strong>Transaction ID:</strong> {topUpData.transactionId}</p>
-          <Button
-            onClick={() => {
-              setShowSuccess(false);
-              setScannedData(null);
-              setAmount("");
-              setSelectedMethod(null);
-              setRemarks("");
-            }}
-            className="bg-[#070149] text-white hover:opacity-90 mt-2"
-          >
-            New Top Up
-          </Button>
-        </div>
-      </div>
+      <TopUpSuccess data={topUpData} onNewTopUp={() => setShowSuccess(false)} />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 px-4">
-      {/* Include your existing JSX layout here */}
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-start py-10 px-4 m-0">
+      <Card className="w-full max-w-xl shadow-2xl border rounded-2xl overflow-hidden m-0">
+        <CardHeader className="bg-[#070149] p-4 rounded-t-2xl m-0">
+          <CardTitle className="flex items-center gap-2 text-xl text-white m-0">
+            <QrCode className="w-6 h-6 text-green-400" />
+            Top Up - Online User
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4 p-6 pt-0">
+          <Dialog open={scannerOpen} onOpenChange={setScannerOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full h-12 text-base">
+                <QrCode className="w-5 h-5 mr-2 text-blue-600" />
+                Scan QR Code
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Scan QR Code</DialogTitle>
+              </DialogHeader>
+              <div className="relative w-full h-64 bg-gray-100 border border-dashed border-[#070149] rounded-lg overflow-hidden">
+                {!html5QrCodeRef.current && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ScanLine className="w-20 h-20 text-[#070149]" />
+                  </div>
+                )}
+                <div id="qr-reader" ref={qrRef} className="w-full h-full" />
+              </div>
+              {cameraError && (
+                <p className="text-red-500 text-sm mt-2">{cameraError}</p>
+              )}
+              <Button
+                onClick={() => setScannerOpen(false)}
+                className="mt-4 bg-[#070149] hover:bg-[#3f3b6d] text-white"
+              >
+                Close
+              </Button>
+            </DialogContent>
+          </Dialog>
+
+        {scannedData && (
+  <div className="space-y-1 bg-gray-100 p-3 rounded-md text-sm">
+    <p><strong>Name:</strong> {scannedData.name}</p>
+    <p><strong>Email:</strong> {scannedData.email}</p>
+    <p><strong>Current Balance:</strong> ₹{scannedData.balance}</p>
+  </div>
+)}
+
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Enter Amount</label>
+            <Input
+              value={amount}
+              readOnly
+              className="text-xl font-bold text-center h-12"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "C"].map(
+              (key) => (
+                <Button
+                  key={key}
+                  onClick={() => handleKeyClick(key)}
+                  variant="secondary"
+                  className="h-12 text-base"
+                >
+                  {key}
+                </Button>
+              )
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            {paymentMethods.map((method) => (
+              <button
+                key={method.label}
+                onClick={() => setSelectedMethod(method.label.toLowerCase())}
+                className={`h-12 text-base border rounded-md transition-all
+                  ${
+                    selectedMethod === method.label.toLowerCase()
+                      ? "border-[#070149] text-[#070149] font-semibold"
+                      : "border-gray-300 text-gray-600"
+                  }
+                `}
+              >
+                <span className="text-lg mr-1">{method.icon}</span>
+                {method.label}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Remarks (optional)
+            </label>
+            <Textarea
+              placeholder="Enter any remarks..."
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              className="h-24"
+            />
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex justify-end px-6 pb-6">
+          <Button
+            disabled={!scannedData || !amount || !selectedMethod}
+            className="h-12 text-base bg-[#070149] text-white hover:opacity-90"
+            onClick={handleTopUp}
+          >
+            <IndianRupee className="w-5 h-5 mr-2 text-white" />
+            Top Up
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* Transaction History Table */}
+      <div className="w-full max-w-xl mt-6 rounded-2xl shadow-lg overflow-hidden bg-white">
+        <div className="bg-[#070149] text-white font-bold text-lg px-6 py-3">
+          Transaction History
+        </div>
+
+        {transactions.map((txn, index) => (
+          <div
+            key={index}
+            className="flex justify-between items-start px-6 py-4 border-b last:border-none"
+          >
+            <div>
+              <div className="font-semibold text-base">{txn.name}</div>
+              <div className="text-sm text-gray-500">{txn.date}</div>
+              <div className="text-sm text-gray-500">{txn.method}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-green-600 font-semibold">{txn.amount}</div>
+              <div className="text-sm text-gray-500">
+                Balance: {txn.balance}
+              </div>
+              {txn.editable && (
+                <button className="text-sm text-[#070149] font-semibold mt-1">
+                  Edit
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 export default TopUpOnlineUser;
-
